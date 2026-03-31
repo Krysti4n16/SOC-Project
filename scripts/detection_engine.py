@@ -115,7 +115,7 @@ def query_logs(phrases, exclude_processes, window_minutes):
 
 def send_alert(rule_name, rule, count, samples):
     alert= {
-        "timestamp":       datetime.now(timezone.utc).isoformat(),
+        "timestamp": datetime.now(timezone.utc).isoformat(),
         "rule":            rule_name,
         "severity":        rule["severity"],
         "description":     rule["description"],

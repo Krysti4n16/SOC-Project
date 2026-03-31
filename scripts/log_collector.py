@@ -38,7 +38,8 @@ def parse_timestamp(raw_ts):
         "%Y-%m-%dT%H:%M:%S%z",
     ):
         try:
-            return datetime.strptime(raw_ts, fmt).isoformat()
+            dt = datetime.strptime(raw_ts, fmt)
+            return dt.astimezone(timezone.utc).isoformat()
         except ValueError:
             continue
     return datetime.now(timezone.utc).isoformat()
