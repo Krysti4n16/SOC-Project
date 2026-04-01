@@ -153,7 +153,7 @@ soc-lab/
 ### Installation
 ```bash
 # 1. Clone repository
-git clone https://github.com/YOUR_USERNAME/soc-lab.git
+git clone https://github.com/Krysti4n16/soc-lab.git
 cd soc-lab
 
 # 2. Start ELK Stack
