@@ -57,7 +57,10 @@ def fetch_macos_logs(last_seconds=60):
         '(category CONTAINS "auth") OR '
         '(eventMessage CONTAINS "denied") OR '
         '(eventMessage CONTAINS "failed") OR '
-        '(eventMessage CONTAINS "unauthorized")'
+        '(eventMessage CONTAINS "unauthorized") OR '
+        '(eventMessage CONTAINS "base64") OR '
+        '(eventMessage CONTAINS "chmod 777") OR '
+        '(eventMessage CONTAINS "history")'
     ]
     result= subprocess.run(cmd, capture_output=True, text=True)
     if not result.stdout.strip():

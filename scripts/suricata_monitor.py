@@ -120,9 +120,19 @@ def run():
 
         elif event_type == "dns":
             query = event.get("dns", {}).get("rrname", "")
-            if any(kw in query for kw in [".onion", ".xyz", ".top", ".ru"]):
-                ts= datetime.now().strftime("%H:%M:%S")
+            suspicious_tlds = [".onion", ".xyz", ".top", ".ru", ".tk", ".pw", ".cc"]
+            if any(kw in query for kw in suspicious_tlds):
+                ts = datetime.now().strftime("%H:%M:%S")
+                src = event.get("src_ip", "?")
                 print(f"[{ts}] [DNS] Suspicious query: {query}")
+                slack_alert(
+                    rule_name="suricata_suspicious_dns",
+                    severity="HIGH",
+                    description="Suspicious DNS query — potential C2 or exfiltration",
+                    count=1,
+                    window_min=0,
+                    samples=[f"Source: {src} → Query: {query}"]
+                )
 
 if __name__ == "__main__":
     run()

@@ -61,6 +61,15 @@ RULES= {
         "window_min":  5,
         "severity":    "HIGH",
     },
+    "defense_evasion": {
+    "description": "Attempting to cover up the tracks – history modification or obfuscation",
+    "phrases":     ["base64 --decode", "history -c", "rm .bash_history",
+                    "chmod 777", "chflags hidden"],
+    "exclude_processes": [],
+    "threshold":   1,
+    "window_min":  5,
+    "severity":    "HIGH",
+},
 }
 
 def create_alerts_index():
