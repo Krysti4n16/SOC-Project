@@ -197,13 +197,13 @@ open http://localhost:5601
 
 | Alerts by Severity | Alerts over Time |
 |-------------------|-----------------|
-| ![Alerts by severity](Dashboards/Alerts_by_severity.png) | ![Alerts over time](Dashboards/Alerts_over_time.png) |
+| ![Alerts by severity](dashboards/Alerts_by_severity.png) | ![Alerts over time](dashboards/Alerts_over_time.png) |
 
 | Top Processes | Events by Level |
 |--------------|----------------|
-| ![Top processes](Dashboards/Top_processes.png) | ![Events by level](Dashboards/Events_by_level.png) |
+| ![Top processes](dashboards/Top_processes.png) | ![Events by level](dashboards/Events_by_level.png) |
 
-![SOC Alerts Table](Dashboards/Soc_alerts.png)
+![SOC Alerts Table](dashboards/Soc_alerts.png)
 
 ---
 
