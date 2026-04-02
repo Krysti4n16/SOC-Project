@@ -13,6 +13,7 @@ pkill -f "detection_engine.py"
 pkill -f "osquery_monitor.py"
 pkill -f "suricata_monitor.py"
 pkill -f "active_response.py"
+pkill -f "correlation_engine.py"
 
 if [ -f /tmp/suricata.pid ]; then
     sudo kill $(cat /tmp/suricata.pid) 2>/dev/null

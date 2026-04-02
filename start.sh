@@ -39,6 +39,10 @@ echo -e "${GREEN}Starting Suricata Monitor...${NC}"
 osascript -e "tell application \"Terminal\" to set custom title of (do script \"cd $SOC_DIR && source venv/bin/activate && sudo suricata -D -c $SOC_DIR/suricata/suricata.yaml -i en0 --pidfile /tmp/suricata.pid && sleep 2 && python3 scripts/suricata_monitor.py\") to \"SOC-Suricata\""
 sleep 2
 
+echo -e "${GREEN}[*] Starting Correlation Engine...${NC}"
+osascript -e "tell application \"Terminal\" to set custom title of (do script \"cd $SOC_DIR && source venv/bin/activate && python3 scripts/correlation_engine.py\") to \"SOC-Correlation\""
+sleep 2
+
 echo -e "${GREEN}Starting Active Response Engine...${NC}"
 osascript -e "tell application \"Terminal\" to set custom title of (do script \"cd $SOC_DIR && sudo $SOC_DIR/venv/bin/python3 scripts/active_response.py --auto\") to \"SOC-ActiveResponse\""
 
