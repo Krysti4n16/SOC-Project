@@ -1,0 +1,12 @@
+{
+  "description": "Detects attempts to escalate privileges or access restricted system resources outside of authorized sandbox boundaries on macOS. Triggered by repeated \"operation not permitted\" errors from non-system processes.",
+  "phrases": [
+    "operation not permitted",
+    "must be run as root",
+    "sudo: auth"
+  ],
+  "exclude_processes": [],
+  "threshold": 1,
+  "window_min": 5,
+  "severity": "HIGH"
+}

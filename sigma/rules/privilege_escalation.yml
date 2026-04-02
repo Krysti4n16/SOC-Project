@@ -1,0 +1,36 @@
+title: Privilege Escalation Attempt on macOS
+id: c3d4e5f6-a7b8-9012-cdef-123456789012
+status: experimental
+description: >
+    Detects attempts to escalate privileges or access restricted system
+    resources outside of authorized sandbox boundaries on macOS.
+    Triggered by repeated "operation not permitted" errors from
+    non-system processes.
+author: Krysti4n16
+date: 2026/04/01
+modified: 2026/04/01
+references:
+    - https://attack.mitre.org/techniques/T1548/
+tags:
+    - attack.privilege_escalation
+    - attack.t1548
+    - attack.t1548.003
+logsource:
+    category: application
+    product: macos
+detection:
+    keywords:
+        - 'operation not permitted'
+        - 'must be run as root'
+        - 'sudo: auth'
+    condition: keywords
+falsepositives:
+    - Normal sandbox restrictions on legitimate apps
+    - macOS system processes accessing protected resources
+    - Known daemons: locationd, managedcorespotlightd
+level: high
+fields:
+    - message
+    - process
+    - subsystem
+    - timestamp

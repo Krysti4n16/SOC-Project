@@ -1,0 +1,12 @@
+{
+  "description": "Detects sequential connection refused errors from a single source within a short time window \u2014 consistent with automated port scanning or network reconnaissance activity.",
+  "phrases": [
+    "connection refused",
+    "connection reset by peer",
+    "no route to host"
+  ],
+  "exclude_processes": [],
+  "threshold": 1,
+  "window_min": 5,
+  "severity": "MEDIUM"
+}

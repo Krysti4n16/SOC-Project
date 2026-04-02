@@ -1,0 +1,14 @@
+{
+  "description": "Detects attempts to evade detection using obfuscation techniques such as base64 encoding of payloads, history deletion, and suspicious file permission modification on macOS.",
+  "phrases": [
+    "base64 --decode",
+    "history -c",
+    "rm .bash_history",
+    "chmod 777",
+    "chflags hidden"
+  ],
+  "exclude_processes": [],
+  "threshold": 1,
+  "window_min": 5,
+  "severity": "HIGH"
+}

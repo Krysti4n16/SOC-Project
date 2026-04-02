@@ -1,0 +1,40 @@
+title: Defense Evasion via Obfuscation on macOS
+id: f6a7b8c9-d0e1-2345-fabc-456789012345
+status: experimental
+description: >
+    Detects attempts to evade detection using obfuscation techniques
+    such as base64 encoding of payloads, history deletion, and
+    suspicious file permission modification on macOS.
+author: Krysti4n16
+date: 2026/04/01
+modified: 2026/04/01
+references:
+    - https://attack.mitre.org/techniques/T1027/
+    - https://attack.mitre.org/techniques/T1222/
+    - https://attack.mitre.org/techniques/T1070/003/
+tags:
+    - attack.defense_evasion
+    - attack.t1027
+    - attack.t1222
+    - attack.t1070
+    - attack.t1070.003
+logsource:
+    category: application
+    product: macos
+detection:
+    keywords:
+        - 'base64 --decode'
+        - 'history -c'
+        - 'rm .bash_history'
+        - 'chmod 777'
+        - 'chflags hidden'
+    condition: keywords
+falsepositives:
+    - Legitimate base64 operations in development
+    - System administration tasks
+    - Authorized security testing
+level: high
+fields:
+    - message
+    - process
+    - timestamp

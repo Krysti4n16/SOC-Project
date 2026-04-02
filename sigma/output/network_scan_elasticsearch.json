@@ -1,0 +1,30 @@
+{
+  "query": {
+    "bool": {
+      "should": [
+        {
+          "match_phrase": {
+            "message": "connection refused"
+          }
+        },
+        {
+          "match_phrase": {
+            "message": "connection reset by peer"
+          }
+        },
+        {
+          "match_phrase": {
+            "message": "no route to host"
+          }
+        }
+      ],
+      "minimum_should_match": 1
+    }
+  },
+  "_source": [
+    "message",
+    "process",
+    "subsystem",
+    "timestamp"
+  ]
+}

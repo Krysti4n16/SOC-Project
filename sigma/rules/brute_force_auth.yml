@@ -1,0 +1,36 @@
+title: Multiple Authentication Failures on macOS
+id: a1b2c3d4-e5f6-7890-abcd-ef1234567890
+status: experimental
+description: >
+    Detects multiple authentication failure events on macOS within
+    a short time window — indicative of brute-force attack or
+    credential stuffing attempt.
+author: Krysti4n16
+date: 2026/04/01
+modified: 2026/04/01
+references:
+    - https://attack.mitre.org/techniques/T1110/
+tags:
+    - attack.credential_access
+    - attack.t1110
+    - attack.t1110.001
+logsource:
+    category: application
+    product: macos
+detection:
+    keywords:
+        - 'authentication failed'
+        - 'login incorrect'
+        - 'invalid credentials'
+        - 'auth failure'
+    condition: keywords
+falsepositives:
+    - Legitimate failed login attempts by users
+    - System processes during startup
+    - Known macOS daemons: biomesyncd, tccd, launchd
+level: high
+fields:
+    - message
+    - process
+    - subsystem
+    - timestamp

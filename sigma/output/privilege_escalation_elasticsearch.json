@@ -1,0 +1,30 @@
+{
+  "query": {
+    "bool": {
+      "should": [
+        {
+          "match_phrase": {
+            "message": "operation not permitted"
+          }
+        },
+        {
+          "match_phrase": {
+            "message": "must be run as root"
+          }
+        },
+        {
+          "match_phrase": {
+            "message": "sudo: auth"
+          }
+        }
+      ],
+      "minimum_should_match": 1
+    }
+  },
+  "_source": [
+    "message",
+    "process",
+    "subsystem",
+    "timestamp"
+  ]
+}

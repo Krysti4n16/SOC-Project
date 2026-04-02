@@ -1,0 +1,34 @@
+title: Network Port Scan Detection on macOS
+id: b2c3d4e5-f6a7-8901-bcde-f12345678901
+status: experimental
+description: >
+    Detects sequential connection refused errors from a single source
+    within a short time window — consistent with automated port scanning
+    or network reconnaissance activity.
+author: Krysti4n16
+date: 2026/04/01
+modified: 2026/04/01
+references:
+    - https://attack.mitre.org/techniques/T1046/
+tags:
+    - attack.discovery
+    - attack.t1046
+logsource:
+    category: network
+    product: macos
+detection:
+    keywords:
+        - 'connection refused'
+        - 'connection reset by peer'
+        - 'no route to host'
+    condition: keywords
+falsepositives:
+    - Normal browser activity (Safari, WebKit)
+    - Background app network checks
+    - Known processes: Safari, nsurlsessiond, WebKit.Networking
+level: medium
+fields:
+    - message
+    - process
+    - subsystem
+    - timestamp

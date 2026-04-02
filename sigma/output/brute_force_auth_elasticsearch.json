@@ -1,0 +1,35 @@
+{
+  "query": {
+    "bool": {
+      "should": [
+        {
+          "match_phrase": {
+            "message": "authentication failed"
+          }
+        },
+        {
+          "match_phrase": {
+            "message": "login incorrect"
+          }
+        },
+        {
+          "match_phrase": {
+            "message": "invalid credentials"
+          }
+        },
+        {
+          "match_phrase": {
+            "message": "auth failure"
+          }
+        }
+      ],
+      "minimum_should_match": 1
+    }
+  },
+  "_source": [
+    "message",
+    "process",
+    "subsystem",
+    "timestamp"
+  ]
+}

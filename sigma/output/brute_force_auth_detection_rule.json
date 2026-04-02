@@ -1,0 +1,13 @@
+{
+  "description": "Detects multiple authentication failure events on macOS within a short time window \u2014 indicative of brute-force attack or credential stuffing attempt.",
+  "phrases": [
+    "authentication failed",
+    "login incorrect",
+    "invalid credentials",
+    "auth failure"
+  ],
+  "exclude_processes": [],
+  "threshold": 1,
+  "window_min": 5,
+  "severity": "HIGH"
+}

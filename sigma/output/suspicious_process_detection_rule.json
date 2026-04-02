@@ -1,0 +1,15 @@
+{
+  "description": "Detects execution or logging of known offensive security tools and post-exploitation frameworks on macOS. Any single occurrence is considered a high-confidence indicator of compromise.",
+  "phrases": [
+    "nmap ",
+    "netcat ",
+    "/bin/nc ",
+    "base64 --decode",
+    "curl | bash",
+    "wget | sh"
+  ],
+  "exclude_processes": [],
+  "threshold": 1,
+  "window_min": 5,
+  "severity": "CRITICAL"
+}

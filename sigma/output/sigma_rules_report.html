@@ -1,0 +1,130 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <title>SOC Lab - SIGMA Rules Report</title>
+    <style>
+        body { font-family: monospace; margin: 40px; background: #0d1117; color: #c9d1d9; }
+        h1 { color: #58a6ff; }
+        h2 { color: #79c0ff; border-bottom: 1px solid #30363d; padding-bottom: 8px; }
+        .rule { background: #161b22; border: 1px solid #30363d; 
+                 border-radius: 8px; padding: 20px; margin: 20px 0; }
+        .tag { background: #1f6feb; color: #fff; padding: 2px 8px; 
+                border-radius: 4px; font-size: 12px; margin: 2px; display: inline-block; }
+        .critical { color: #ff7b72; font-weight: bold; }
+        .high { color: #f0883e; font-weight: bold; }
+        .medium { color: #e3b341; }
+        .low { color: #3fb950; }
+        pre { background: #0d1117; padding: 12px; border-radius: 6px; 
+               overflow-x: auto; border: 1px solid #30363d; }
+        .meta { color: #8b949e; font-size: 13px; }
+    </style>
+</head>
+<body>
+    <h1>SOC Lab - SIGMA Detection Rules</h1>
+    <p class="meta">Generated: 2026-04-02 11:35:26 
+    | Rules: 6 | Author: Krysti4n16</p>
+
+    <div class="rule">
+        <h2>Multiple Authentication Failures on macOS</h2>
+        <p><strong>ID:</strong> <code>a1b2c3d4-e5f6-7890-abcd-ef1234567890</code></p>
+        <p><strong>Level:</strong> <span class="high">HIGH</span></p>
+        <p><strong>Status:</strong> experimental</p>
+        <p><strong>Description:</strong> Detects multiple authentication failure events on macOS within a short time window — indicative of brute-force attack or credential stuffing attempt.</p>
+        <p><strong>Tags:</strong> <span class="tag">attack.credential_access</span> <span class="tag">attack.t1110</span> <span class="tag">attack.t1110.001</span></p>
+        <p><strong>Detection keywords:</strong></p>
+        <pre>  - "authentication failed"
+  - "login incorrect"
+  - "invalid credentials"
+  - "auth failure"</pre>
+        <p><strong>False positives:</strong><br>• Legitimate failed login attempts by users<br>• System processes during startup<br>• {'Known macOS daemons': 'biomesyncd, tccd, launchd'}</p>
+        <p class="meta"><strong>References:</strong> 
+        <a href="https://attack.mitre.org/techniques/T1110/" style="color:#58a6ff">https://attack.mitre.org/techniques/T1110/</a></p>
+    </div>
+
+    <div class="rule">
+        <h2>Keychain and Credential Store Access on macOS</h2>
+        <p><strong>ID:</strong> <code>e5f6a7b8-c9d0-1234-efab-345678901234</code></p>
+        <p><strong>Level:</strong> <span class="high">HIGH</span></p>
+        <p><strong>Status:</strong> experimental</p>
+        <p><strong>Description:</strong> Detects attempts to access macOS Keychain or credential stores. Covers both programmatic access via Security framework APIs and command-line tools like security(1).</p>
+        <p><strong>Tags:</strong> <span class="tag">attack.credential_access</span> <span class="tag">attack.t1555</span> <span class="tag">attack.t1555.001</span></p>
+        <p><strong>Detection keywords:</strong></p>
+        <pre>  - "keychain unlock failed"
+  - "SecKeychainFind"
+  - "kSecClass"
+  - "certificate verify failed"</pre>
+        <p><strong>False positives:</strong><br>• Legitimate keychain access by user applications<br>• {'System processes': 'trustd, secd'}<br>• Password managers with proper entitlements</p>
+        <p class="meta"><strong>References:</strong> 
+        <a href="https://attack.mitre.org/techniques/T1555/" style="color:#58a6ff">https://attack.mitre.org/techniques/T1555/</a> | <a href="https://attack.mitre.org/techniques/T1555/001/" style="color:#58a6ff">https://attack.mitre.org/techniques/T1555/001/</a></p>
+    </div>
+
+    <div class="rule">
+        <h2>Defense Evasion via Obfuscation on macOS</h2>
+        <p><strong>ID:</strong> <code>f6a7b8c9-d0e1-2345-fabc-456789012345</code></p>
+        <p><strong>Level:</strong> <span class="high">HIGH</span></p>
+        <p><strong>Status:</strong> experimental</p>
+        <p><strong>Description:</strong> Detects attempts to evade detection using obfuscation techniques such as base64 encoding of payloads, history deletion, and suspicious file permission modification on macOS.</p>
+        <p><strong>Tags:</strong> <span class="tag">attack.defense_evasion</span> <span class="tag">attack.t1027</span> <span class="tag">attack.t1222</span> <span class="tag">attack.t1070</span> <span class="tag">attack.t1070.003</span></p>
+        <p><strong>Detection keywords:</strong></p>
+        <pre>  - "base64 --decode"
+  - "history -c"
+  - "rm .bash_history"
+  - "chmod 777"
+  - "chflags hidden"</pre>
+        <p><strong>False positives:</strong><br>• Legitimate base64 operations in development<br>• System administration tasks<br>• Authorized security testing</p>
+        <p class="meta"><strong>References:</strong> 
+        <a href="https://attack.mitre.org/techniques/T1027/" style="color:#58a6ff">https://attack.mitre.org/techniques/T1027/</a> | <a href="https://attack.mitre.org/techniques/T1222/" style="color:#58a6ff">https://attack.mitre.org/techniques/T1222/</a> | <a href="https://attack.mitre.org/techniques/T1070/003/" style="color:#58a6ff">https://attack.mitre.org/techniques/T1070/003/</a></p>
+    </div>
+
+    <div class="rule">
+        <h2>Network Port Scan Detection on macOS</h2>
+        <p><strong>ID:</strong> <code>b2c3d4e5-f6a7-8901-bcde-f12345678901</code></p>
+        <p><strong>Level:</strong> <span class="medium">MEDIUM</span></p>
+        <p><strong>Status:</strong> experimental</p>
+        <p><strong>Description:</strong> Detects sequential connection refused errors from a single source within a short time window — consistent with automated port scanning or network reconnaissance activity.</p>
+        <p><strong>Tags:</strong> <span class="tag">attack.discovery</span> <span class="tag">attack.t1046</span></p>
+        <p><strong>Detection keywords:</strong></p>
+        <pre>  - "connection refused"
+  - "connection reset by peer"
+  - "no route to host"</pre>
+        <p><strong>False positives:</strong><br>• Normal browser activity (Safari, WebKit)<br>• Background app network checks<br>• {'Known processes': 'Safari, nsurlsessiond, WebKit.Networking'}</p>
+        <p class="meta"><strong>References:</strong> 
+        <a href="https://attack.mitre.org/techniques/T1046/" style="color:#58a6ff">https://attack.mitre.org/techniques/T1046/</a></p>
+    </div>
+
+    <div class="rule">
+        <h2>Privilege Escalation Attempt on macOS</h2>
+        <p><strong>ID:</strong> <code>c3d4e5f6-a7b8-9012-cdef-123456789012</code></p>
+        <p><strong>Level:</strong> <span class="high">HIGH</span></p>
+        <p><strong>Status:</strong> experimental</p>
+        <p><strong>Description:</strong> Detects attempts to escalate privileges or access restricted system resources outside of authorized sandbox boundaries on macOS. Triggered by repeated "operation not permitted" errors from non-system processes.</p>
+        <p><strong>Tags:</strong> <span class="tag">attack.privilege_escalation</span> <span class="tag">attack.t1548</span> <span class="tag">attack.t1548.003</span></p>
+        <p><strong>Detection keywords:</strong></p>
+        <pre>  - "operation not permitted"
+  - "must be run as root"
+  - "sudo: auth"</pre>
+        <p><strong>False positives:</strong><br>• Normal sandbox restrictions on legitimate apps<br>• macOS system processes accessing protected resources<br>• {'Known daemons': 'locationd, managedcorespotlightd'}</p>
+        <p class="meta"><strong>References:</strong> 
+        <a href="https://attack.mitre.org/techniques/T1548/" style="color:#58a6ff">https://attack.mitre.org/techniques/T1548/</a></p>
+    </div>
+
+    <div class="rule">
+        <h2>Offensive Security Tool Execution on macOS</h2>
+        <p><strong>ID:</strong> <code>d4e5f6a7-b8c9-0123-defa-234567890123</code></p>
+        <p><strong>Level:</strong> <span class="critical">CRITICAL</span></p>
+        <p><strong>Status:</strong> experimental</p>
+        <p><strong>Description:</strong> Detects execution or logging of known offensive security tools and post-exploitation frameworks on macOS. Any single occurrence is considered a high-confidence indicator of compromise.</p>
+        <p><strong>Tags:</strong> <span class="tag">attack.execution</span> <span class="tag">attack.t1059</span> <span class="tag">attack.t1059.004</span></p>
+        <p><strong>Detection keywords:</strong></p>
+        <pre>  - "nmap "
+  - "netcat "
+  - "/bin/nc "
+  - "base64 --decode"
+  - "curl | bash"
+  - "wget | sh"</pre>
+        <p><strong>False positives:</strong><br>• Authorized penetration testing activity<br>• Security research in isolated environment<br>• Developer tooling in CI/CD pipelines</p>
+        <p class="meta"><strong>References:</strong> 
+        <a href="https://attack.mitre.org/techniques/T1059/" style="color:#58a6ff">https://attack.mitre.org/techniques/T1059/</a> | <a href="https://attack.mitre.org/techniques/T1059/004/" style="color:#58a6ff">https://attack.mitre.org/techniques/T1059/004/</a></p>
+    </div>
+</body></html>

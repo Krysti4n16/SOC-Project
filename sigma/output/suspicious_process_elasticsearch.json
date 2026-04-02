@@ -1,0 +1,44 @@
+{
+  "query": {
+    "bool": {
+      "should": [
+        {
+          "match_phrase": {
+            "message": "nmap "
+          }
+        },
+        {
+          "match_phrase": {
+            "message": "netcat "
+          }
+        },
+        {
+          "match_phrase": {
+            "message": "/bin/nc "
+          }
+        },
+        {
+          "match_phrase": {
+            "message": "base64 --decode"
+          }
+        },
+        {
+          "match_phrase": {
+            "message": "curl | bash"
+          }
+        },
+        {
+          "match_phrase": {
+            "message": "wget | sh"
+          }
+        }
+      ],
+      "minimum_should_match": 1
+    }
+  },
+  "_source": [
+    "message",
+    "process",
+    "timestamp"
+  ]
+}

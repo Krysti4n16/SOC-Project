@@ -1,0 +1,38 @@
+title: Offensive Security Tool Execution on macOS
+id: d4e5f6a7-b8c9-0123-defa-234567890123
+status: experimental
+description: >
+    Detects execution or logging of known offensive security tools
+    and post-exploitation frameworks on macOS. Any single occurrence
+    is considered a high-confidence indicator of compromise.
+author: Krysti4n16
+date: 2026/04/01
+modified: 2026/04/01
+references:
+    - https://attack.mitre.org/techniques/T1059/
+    - https://attack.mitre.org/techniques/T1059/004/
+tags:
+    - attack.execution
+    - attack.t1059
+    - attack.t1059.004
+logsource:
+    category: application
+    product: macos
+detection:
+    keywords:
+        - 'nmap '
+        - 'netcat '
+        - '/bin/nc '
+        - 'base64 --decode'
+        - 'curl | bash'
+        - 'wget | sh'
+    condition: keywords
+falsepositives:
+    - Authorized penetration testing activity
+    - Security research in isolated environment
+    - Developer tooling in CI/CD pipelines
+level: critical
+fields:
+    - message
+    - process
+    - timestamp

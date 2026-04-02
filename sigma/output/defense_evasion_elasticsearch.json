@@ -1,0 +1,39 @@
+{
+  "query": {
+    "bool": {
+      "should": [
+        {
+          "match_phrase": {
+            "message": "base64 --decode"
+          }
+        },
+        {
+          "match_phrase": {
+            "message": "history -c"
+          }
+        },
+        {
+          "match_phrase": {
+            "message": "rm .bash_history"
+          }
+        },
+        {
+          "match_phrase": {
+            "message": "chmod 777"
+          }
+        },
+        {
+          "match_phrase": {
+            "message": "chflags hidden"
+          }
+        }
+      ],
+      "minimum_should_match": 1
+    }
+  },
+  "_source": [
+    "message",
+    "process",
+    "timestamp"
+  ]
+}
