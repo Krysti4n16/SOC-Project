@@ -1,11 +1,22 @@
 # SOC Lab — Automated Threat Detection System
 
-A home Security Operations Center (SOC) built on macOS, designed to simulate
+![Python](https://img.shields.io/badge/Python-3.11-blue)
+![Elasticsearch](https://img.shields.io/badge/Elasticsearch-8.13-green)
+![Docker](https://img.shields.io/badge/Docker-compose-blue)
+![MITRE ATT&CK](https://img.shields.io/badge/MITRE-ATT%26CK-red)
+![Platform](https://img.shields.io/badge/Platform-macOS-lightgrey)
+![CI](https://github.com/Krysti4n16/Soc-project/actions/workflows/ci.yml/badge.svg)
+
+> **Attack → Detection → Slack alert in under 60 seconds.**
+
+![SOC Lab Demo](dashboards/demo.gif)
+
+A home Security Operations Center (SOC) built on macOS, simulating
 real-world threat detection workflows used by enterprise security teams.
 
 The system collects macOS system logs, analyzes them with a custom detection
-engine, correlates alerts with threat intelligence, and notifies via Slack —
-all running locally without cloud dependencies.
+engine, correlates alerts across multiple sources, enriches with threat
+intelligence, and notifies via Slack — fully containerized with Docker.
 
 ---
 
@@ -22,23 +33,29 @@ macOS System Logs
                                 ▼
                     ┌───────────────────────┐
                     │   Detection Engine    │
-                    │   6 rules             │
+                    │   6 custom rules      │
                     │   match_phrase query  │
                     │   process whitelisting│
                     └───────────┬───────────┘
                                 │
-              ┌─────────────────┼─────────────────┐
-              ▼                 ▼                 ▼
-   ┌──────────────┐   ┌──────────────┐   ┌──────────────┐
-   │  VirusTotal  │   │    Slack     │   │   osquery    │
-   │  IP checker  │   │   Alerts     │   │   Monitor    │
-   └──────────────┘   └──────────────┘   └──────────────┘
-                                                │
-                                                ▼
-                                    ┌──────────────────┐
-                                    │  Suricata IDS    │
-                                    │  17 custom rules │
-                                    └──────────────────┘
+              ┌─────────────────┼──────────────────┐
+              ▼                 ▼                  ▼
+   ┌──────────────┐   ┌──────────────┐   ┌──────────────────┐
+   │  VirusTotal  │   │    Slack     │   │  Correlation     │
+   │  IP checker  │   │   Alerts     │   │  Engine          │
+   └──────┬───────┘   └──────────────┘   └──────────────────┘
+          │
+          ▼
+   ┌──────────────┐         ┌──────────────────┐
+   │   Active     │         │   osquery        │
+   │   Response   │         │   Monitor        │
+   │  (PF block)  │         └──────────────────┘
+   └──────────────┘                  │
+                                     ▼
+                         ┌──────────────────────┐
+                         │   Suricata IDS       │
+                         │   17 custom rules    │
+                         └──────────────────────┘
 ```
 
 ---
@@ -48,13 +65,17 @@ macOS System Logs
 | Component | Technology | Purpose |
 |-----------|-----------|---------|
 | SIEM | Elasticsearch 8.13 + Kibana | Log storage and visualization |
-| Log Collection | Python 3 + macOS `log` API | System event collection |
-| Detection Engine | Python 3 + ES Query DSL | Threat detection rules |
+| Log Collection | Python 3.11 + macOS `log` API | System event collection |
+| Detection Engine | Python 3.11 + ES Query DSL | Threat detection rules |
+| Correlation Engine | Python 3.11 | Multi-source alert correlation |
 | Threat Intel | VirusTotal API v3 | IP reputation checking |
 | Alerting | Slack Incoming Webhooks | Real-time notifications |
+| Active Response | macOS PF Firewall | Automatic IP blocking |
 | Endpoint Monitor | osquery | Process, port, file monitoring |
 | Network IDS | Suricata 7.0 | Network traffic analysis |
-| Infrastructure | Docker Desktop | ELK containerization |
+| Rule Format | SIGMA | Vendor-neutral detection rules |
+| Infrastructure | Docker + docker-compose | Full containerization |
+| CI/CD | GitHub Actions | Automated testing on every push |
 
 ---
 
@@ -70,6 +91,16 @@ macOS System Logs
 | suspicious_process | T1059 — Command and Scripting | CRITICAL | 1 event / 10min |
 | credential_access | T1555 — Credentials from Stores | HIGH | 3 events / 5min |
 | defense_evasion | T1027 — Obfuscated Files | HIGH | 1 event / 5min |
+
+### correlation_engine.py — 5 scenarios
+
+| Scenario | Sources Correlated | Severity | MITRE |
+|----------|-------------------|----------|-------|
+| malware_execution_chain | detection + osquery | CRITICAL | T1027, T1059.004, T1041 |
+| lateral_movement_attempt | detection + detection | HIGH | T1046, T1110, T1021 |
+| persistence_with_privesc | osquery + detection | CRITICAL | T1543.001, T1548 |
+| credential_harvesting | detection + detection | CRITICAL | T1555, T1059 |
+| exfiltration_chain | detection + osquery | CRITICAL | T1027, T1041, T1048 |
 
 ### suricata/rules/custom/custom.rules — 17 rules
 
@@ -91,6 +122,44 @@ macOS System Logs
 | SOC-015/016 | Suspicious TLD queries | C2 |
 | SOC-017 | DGA detection | C2 |
 
+### sigma/rules — 6 SIGMA rules
+
+All detection rules available in vendor-neutral
+[SIGMA format](sigma/rules/) — convertible to Splunk, Microsoft Sentinel,
+QRadar and other enterprise SIEMs.
+```bash
+python3 sigma/sigma_converter.py
+```
+
+---
+
+## Sample Incident Report — IR-004 (excerpt)
+
+**Detection trigger**: Rules `suspicious_process` (CRITICAL) and
+`defense_evasion` (HIGH) fired simultaneously at 16:36:09
+
+**Commands observed**:
+```bash
+echo "dGVzdCBvYmZ1c2NhdGlvbg==" | base64 --decode > /tmp/decoded.txt
+chmod 777 /tmp/decoded.txt
+```
+
+**Timeline**:
+- `16:35:00` — base64 decode operation logged by system
+- `16:36:09` — `suspicious_process` CRITICAL alert fired (threshold: 1 event)
+- `16:36:10` — `defense_evasion` HIGH alert fired (chmod 777 correlation)
+- `16:36:10` — two Slack alerts fired within 1 second of each other
+- `16:36:15` — osquery `modified_files` detected /tmp/ write independently
+
+**Analyst action**: Correlated both alerts by timestamp — same 1-second
+window confirmed single attacker action triggering multiple detection layers.
+Hash submitted to VirusTotal → 0/72 (confirmed benign simulation).
+
+**MITRE ATT&CK**: T1027 (Obfuscated Files) → T1222 (Permission Modification)
+→ T1059.004 (Unix Shell Execution)
+
+> Full write-ups for all 5 incidents in [/docs](docs/)
+
 ---
 
 ## Simulated Incidents
@@ -108,91 +177,6 @@ with full analyst write-ups.
 
 ---
 
-## Project Structure
-```
-soc-lab/
-├── scripts/
-│   ├── log_collector.py        # macOS log collection → Elasticsearch
-│   ├── detection_engine.py     # Threat detection rules engine
-│   ├── virustotal_checker.py   # IP reputation via VirusTotal API
-│   ├── slack_notifier.py       # Slack webhook notifications
-│   ├── osquery_monitor.py      # Endpoint monitoring via osquery
-│   └── suricata_monitor.py     # Suricata IDS log parser
-├── suricata/
-│   ├── suricata.yaml           # Suricata configuration
-│   └── rules/
-│       └── custom/
-│           └── custom.rules    # 17 custom detection rules
-├── docs/
-│   ├── IR-001-discovery.md
-│   ├── IR-002-persistence.md
-│   ├── IR-003-credential-access.md
-│   ├── IR-004-defense-evasion.md
-│   └── IR-005-exfiltration.md
-├── Dashboards/
-│   ├── Alerts_by_severity.png
-│   ├── Alerts_over_time.png
-│   ├── Events_by_level.png
-│   ├── Soc_alerts.png
-│   └── Top_processes.png
-├── docker-compose.yml          # ELK Stack setup
-├── .env.example                # Required environment variables
-└── README.md
-```
-
----
-
-## Setup
-
-### Prerequisites
-- macOS 12+
-- Docker Desktop
-- Python 3.9+
-- Homebrew
-
-### Installation
-```bash
-# 1. Clone repository
-git clone https://github.com/Krysti4n16/soc-lab.git
-cd soc-lab
-
-# 2. Start ELK Stack
-docker compose up -d
-
-# 3. Install Python dependencies
-pip3 install requests
-
-# 4. Install endpoint monitoring tools
-brew install osquery suricata
-
-# 5. Configure environment
-cp .env.example .env
-# Edit .env and add your API keys:
-# VIRUSTOTAL_API_KEY=your_key
-# SLACK_WEBHOOK_URL=your_webhook
-```
-
-### Running
-```bash
-# Terminal 1 — collect logs
-python3 scripts/log_collector.py
-
-# Terminal 2 — run detection
-python3 scripts/detection_engine.py
-
-# Terminal 3 — endpoint monitoring
-python3 scripts/osquery_monitor.py
-
-# Terminal 4 — network IDS
-sudo suricata -c suricata/suricata.yaml -i en0
-python3 scripts/suricata_monitor.py
-
-# Kibana dashboard
-open http://localhost:5601
-```
-
----
-
 ## Kibana Dashboard
 
 | Alerts by Severity | Alerts over Time |
@@ -207,23 +191,157 @@ open http://localhost:5601
 
 ---
 
+## Project Structure
+```
+Soc-project/
+├── scripts/
+│   ├── log_collector.py        # macOS log collection → Elasticsearch
+│   ├── detection_engine.py     # Threat detection rules engine
+│   ├── correlation_engine.py   # Multi-source alert correlation
+│   ├── virustotal_checker.py   # IP reputation via VirusTotal API
+│   ├── slack_notifier.py       # Slack webhook notifications
+│   ├── osquery_monitor.py      # Endpoint monitoring via osquery
+│   ├── suricata_monitor.py     # Suricata IDS log parser
+│   └── active_response.py      # Automatic IP blocking via PF firewall
+├── sigma/
+│   ├── rules/                  # 6 SIGMA detection rules
+│   ├── output/                 # Generated ES queries + HTML report
+│   └── sigma_converter.py      # SIGMA → Elasticsearch converter
+├── suricata/
+│   ├── suricata.yaml           # Suricata configuration
+│   └── rules/custom/
+│       └── custom.rules        # 17 custom detection rules
+├── docs/
+│   |                           # Kibana dashboard
+│   ├── IR-001-discovery.md
+│   ├── IR-002-persistence.md
+│   ├── IR-003-credential-access.md
+│   ├── IR-004-defense-evasion.md
+│   └── IR-005-exfiltration.md
+├── tests/
+│   └── test_rules.py           # Automated test suite
+├── .github/
+│   └── workflows/
+│       └── ci.yml              # GitHub Actions CI pipeline
+├── Dockerfile                  # Python scripts container
+├── docker-compose.yml          # Full stack orchestration
+├── Makefile                    # Developer shortcuts
+├── requirements.txt            # Python dependencies
+├── start.sh                    # Quick start script
+├── stop.sh                     # Stop all components
+├── .env.example                # Required environment variables
+└── README.md
+```
+
+---
+
+## Setup
+
+### Architecture note
+
+`log_collector.py` and `osquery_monitor.py` run directly on the host
+because they use macOS-native APIs (`log show`, osquery) that are not
+available inside Linux containers. All other components (detection engine,
+correlation engine, VirusTotal checker) run in Docker.
+
+| Component | Runs in Docker | Reason |
+|-----------|---------------|--------|
+| Elasticsearch + Kibana | yes | stateless service |
+| detection_engine.py | yes | queries ES only |
+| correlation_engine.py | yes | queries ES only |
+| virustotal_checker.py | yes | external API calls only |
+| log_collector.py | **no — host** | requires macOS `log show` |
+| osquery_monitor.py | **no — host** | requires osquery on host |
+| suricata_monitor.py | **no — host** | requires Suricata on host |
+
+### Prerequisites
+
+- macOS 12+
+- Docker Desktop
+- Python 3.11+
+- Homebrew
+
+### Installation
+```bash
+# 1. Clone repository
+git clone https://github.com/Krysti4n16/Soc-project.git
+cd Soc-project
+
+# 2. Configure environment
+cp .env.example .env
+# Edit .env:
+# VIRUSTOTAL_API_KEY=your_key
+# SLACK_WEBHOOK_URL=your_webhook
+
+# 3. Install tools
+brew install osquery suricata
+```
+
+### Running
+```bash
+# Recommended — one command starts everything
+make start
+
+# Check status
+make status
+
+# View logs
+make logs
+
+# Run tests
+make test
+
+# Stop everything
+make stop
+```
+
+Manual startup (alternative):
+```bash
+./start.sh
+```
+
+### Available make commands
+```
+make start       Start all SOC components
+make stop        Stop all components
+make restart     Restart all components
+make build       Rebuild Docker images
+make logs        Show logs from all containers
+make status      Show container status + ES health
+make test        Run automated test suite
+make sigma       Convert SIGMA rules to ES queries
+make kibana      Open Kibana in browser
+make clean       Remove containers and volumes
+```
+
+---
+
 ## Key Results
 
 - Collected **130,000+** security events over project duration
-- Achieved **0 false positives** on clean baseline after tuning
+- Reduced false positive rate from **~40% to 0%** after 3 iterations
+  of threshold tuning — whitelisted 8 macOS system processes
+  (`launchd`, `mDNSResponder`, `tccd`) and adjusted detection windows
 - Detected all **5 simulated attack scenarios** successfully
 - Average detection time: **< 60 seconds** from attack to Slack alert
+- Correlated alerts across **3 independent detection layers** simultaneously
+  (detection engine + osquery + Suricata) in IR-004
 - Checked **9 external IPs** against VirusTotal threat intelligence
-- Written **17 custom Suricata rules** covering recon, C2, exfiltration
+- Written **23 detection rules** total (6 engine + 17 Suricata)
+- **6 SIGMA rules** convertible to Splunk, Sentinel, QRadar
+- Full CI/CD pipeline — every push validated automatically
 
 ---
 
 ## Skills Demonstrated
 
-`SIEM` `Log Analysis` `Python` `Elasticsearch` `Threat Detection`
-`MITRE ATT&CK` `Incident Response` `Threat Intelligence` `IDS/IPS`
-`osquery` `Suricata` `Docker` `Slack API` `VirusTotal API`
-`False Positive Tuning` `Network Security` `Endpoint Monitoring`
+`SIEM` `Log Analysis` `Python` `Elasticsearch` `Kibana`
+`Threat Detection` `MITRE ATT&CK` `Incident Response`
+`Threat Intelligence` `IDS/IPS` `osquery` `Suricata` `Docker`
+`docker-compose` `GitHub Actions` `CI/CD` `Slack API`
+`VirusTotal API` `False Positive Tuning` `Network Security`
+`Endpoint Monitoring` `SIGMA Rules` `Active Response` `SOAR`
+`Makefile` `DevSecOps`
 
 ---
 
@@ -234,3 +352,4 @@ open http://localhost:5601
 - [Suricata Documentation](https://docs.suricata.io/)
 - [osquery Documentation](https://osquery.readthedocs.io/)
 - [VirusTotal API v3](https://developers.virustotal.com/reference)
+- [SIGMA Rules](https://github.com/SigmaHQ/sigma)
