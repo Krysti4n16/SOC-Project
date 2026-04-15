@@ -1,0 +1,124 @@
+name: SOC Project CI
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+
+jobs:
+  lint:
+    name: Lint Python
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.11'
+
+      - name: Install dependencies
+        run: |
+          pip install flake8 pyyaml requests
+
+      - name: Lint with flake8
+        run: |
+          flake8 scripts/ sigma/ \
+            --max-line-length=100 \
+            --ignore=E501,W503 \
+            --exclude=__pycache__
+
+  validate-sigma:
+    name: Validate SIGMA Rules
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.11'
+
+      - name: Install dependencies
+        run: pip install pyyaml
+
+      - name: Validate SIGMA rules
+        run: python3 sigma/sigma_converter.py
+
+      - name: Check required SIGMA fields
+        run: |
+          python3 - << 'EOF'
+          import yaml, os, sys
+          rules_dir = "sigma/rules"
+          errors = []
+          for f in os.listdir(rules_dir):
+              if not f.endswith(".yml"):
+                  continue
+              with open(f"{rules_dir}/{f}") as fp:
+                  rule = yaml.safe_load(fp.read().split("---")[0])
+              for field in ["title", "id", "detection", "level", "tags"]:
+                  if field not in rule:
+                      errors.append(f"{f}: missing '{field}'")
+          if errors:
+              print("SIGMA validation errors:")
+              for e in errors:
+                  print(f"  - {e}")
+              sys.exit(1)
+          print(f"All {len(os.listdir(rules_dir))} SIGMA rules valid")
+          EOF
+
+  validate-detection-rules:
+    name: Validate Detection Rules
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.11'
+
+      - name: Install dependencies
+        run: pip install requests pyyaml python-dotenv
+
+      - name: Validate detection engine rules
+        run: |
+          python3 - << 'EOF'
+          import sys
+          sys.path.insert(0, "scripts")
+          from detection_engine import RULES
+          errors = []
+          for name, rule in RULES.items():
+              for field in ["description", "phrases", "threshold",
+                            "window_min", "severity"]:
+                  if field not in rule:
+                      errors.append(f"{name}: missing '{field}'")
+              if rule.get("threshold", 0) <= 0:
+                  errors.append(f"{name}: threshold must be > 0")
+              if rule.get("severity") not in ["LOW","MEDIUM","HIGH","CRITICAL"]:
+                  errors.append(f"{name}: invalid severity")
+          if errors:
+              for e in errors: print(f"ERROR: {e}")
+              sys.exit(1)
+          print(f"All {len(RULES)} detection rules valid")
+          EOF
+
+  docker-build:
+    name: Docker Build
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Create dummy .env for build
+        run: echo "ES_URL=http://localhost:9200" > .env
+
+      - name: Build Docker image
+        run: docker build -t soc-lab:test .
+
+      - name: Verify image
+        run: |
+          docker run --rm soc-lab:test python3 -c "
+          import requests, yaml, json
+          print('All dependencies installed correctly')
+          "
