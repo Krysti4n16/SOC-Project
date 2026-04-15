@@ -1,6 +1,5 @@
 from slack_notifier import send_alert as slack_alert
 import requests
-import json
 from datetime import datetime, timezone, timedelta
 import time
 import sys

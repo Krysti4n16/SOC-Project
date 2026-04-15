@@ -97,15 +97,15 @@ def tail_log(filepath):
                 else:
                     time.sleep(0.5)
     except FileNotFoundError:
-        print(f"Log file not found: {filepath}")
-        print(f"Ensure Suricata is running: sudo suricata -c ~/Desktop/soc-project/suricata/suricata.yaml -i en0")
+        print("Log file not found: {filepath}")
+        print("Ensure Suricata is running: sudo suricata -c ~/Desktop/soc-project/suricata/suricata.yaml -i en0")
         return
 
 
 def run():
     print("SOC Lab — Suricata IDS Monitor")
     create_suricata_index()
-    print(f"Watching: {LOG_FILE}")
+    print("Watching: {LOG_FILE}")
     print("Waiting for Suricata alerts\n")
 
     alerts = 0
@@ -122,8 +122,8 @@ def run():
             ts = datetime.now().strftime("%H:%M:%S")
             src = event.get("src_ip", "?")
             dst = f"{event.get('dest_ip', '?')}:{event.get('dest_port', '?')}"
-            print(f"[{ts}] [{severity_label}] {src} → {dst}")
-            print(f"         {signature[:80]}")
+            print("[{ts}] [{severity_label}] {src} → {dst}")
+            print("         {signature[:80]}")
 
         elif event_type == "dns":
             query = event.get("dns", {}).get("rrname", "")
@@ -132,14 +132,14 @@ def run():
             if any(kw in query for kw in suspicious_tlds):
                 ts = datetime.now().strftime("%H:%M:%S")
                 src = event.get("src_ip", "?")
-                print(f"[{ts}] [DNS] Suspicious query: {query}")
+                print("[{ts}] [DNS] Suspicious query: {query}")
                 slack_alert(
                     rule_name="suricata_suspicious_dns",
                     severity="HIGH",
                     description="Suspicious DNS query — potential C2 or exfiltration",
                     count=1,
                     window_min=0,
-                    samples=[f"Source: {src} → Query: {query}"]
+                    samples=["Source: {src} → Query: {query}"]
                 )
 
 

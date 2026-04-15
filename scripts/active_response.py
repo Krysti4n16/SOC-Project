@@ -2,7 +2,6 @@ from slack_notifier import send_alert as slack_alert
 import subprocess
 import requests
 import os
-import json
 from datetime import datetime, timezone
 import sys
 
@@ -142,7 +141,7 @@ def unblock_ip(ip):
         capture_output=True, text=True
     )
 
-    write_result = subprocess.run(
+    _ = subprocess.run(
         ["sudo", "tee", PF_BLOCKLIST],
         input=result.stdout.encode('utf-8'),
         stdout=subprocess.DEVNULL,
@@ -164,7 +163,7 @@ def list_blocked():
         ["sudo", "cat", PF_BLOCKLIST],
         capture_output=True, text=True
     )
-    lines = [l.strip() for l in result.stdout.splitlines() if l.strip()]
+    lines = [item.strip() for item in result.stdout.splitlines() if item.strip()]
     if not lines:
         print("Blocklist is empty")
         return []
