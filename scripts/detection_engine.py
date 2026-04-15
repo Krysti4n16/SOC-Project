@@ -9,18 +9,18 @@ sys.path.insert(0, os.path.dirname(__file__))
 from slack_notifier import send_alert as slack_alert
 from virustotal_checker import run_vt_check, create_vt_index
 
-ES_URL= os.environ.get("ES_URL", "http://localhost:9200")
-INDEX= "soc-macos-logs"
-ALERTS_INDEX= "soc-alerts"
+ES_URL = os.environ.get("ES_URL", "http://localhost:9200")
+INDEX = "soc-macos-logs"
+ALERTS_INDEX = "soc-alerts"
 
-WHITELIST_PROCESSES= [
+WHITELIST_PROCESSES = [
     "biomesyncd", "biomed", "tccd", "launchd", "Safari",
     "com.apple.Safari.SafeBrowsing.Service",
     "com.apple.WebKit.Networking", "secd", "trustd",
     "translationd", "deleted"
 ]
 
-RULES= {
+RULES = {
     "brute_force_auth": {
         "description": "Multiple login failures - possible brute-force attack",
         "phrases":     ["authentication failed", "login incorrect", "invalid credentials", "auth failure"],
@@ -73,7 +73,7 @@ RULES= {
 }
 
 def create_alerts_index():
-    mapping= {
+    mapping = {
         "mappings": {
             "properties": {
                 "timestamp":       {"type": "date"},
@@ -86,16 +86,16 @@ def create_alerts_index():
             }
         }
     }
-    r= requests.put(f"{ES_URL}/{ALERTS_INDEX}", json=mapping)
+    r = requests.put(f"{ES_URL}/{ALERTS_INDEX}", json=mapping)
     if r.status_code in (200, 400):
         print(f"Alerts index '{ALERTS_INDEX}' ready")
 
 def query_logs(phrases, exclude_processes, window_minutes):
-    since= (datetime.now(timezone.utc) - timedelta(minutes=window_minutes)).isoformat()
-    should_clauses= [{"match_phrase": {"message": phrase}} for phrase in phrases]
-    must_not_clauses= [{"term": {"process": proc}} for proc in exclude_processes]
+    since = (datetime.now(timezone.utc) - timedelta(minutes=window_minutes)).isoformat()
+    should_clauses = [{"match_phrase": {"message": phrase}} for phrase in phrases]
+    must_not_clauses = [{"term": {"process": proc}} for proc in exclude_processes]
 
-    query= {
+    query = {
         "query": {
             "bool": {
                 "must": [{"range": {"timestamp": {"gte": since}}}],
@@ -108,21 +108,21 @@ def query_logs(phrases, exclude_processes, window_minutes):
         "_source": ["timestamp", "message", "process", "subsystem"]
     }
 
-    r= requests.post(f"{ES_URL}/{INDEX}/_search", json=query)
+    r = requests.post(f"{ES_URL}/{INDEX}/_search", json=query)
     if r.status_code != 200:
         return 0, []
 
-    data= r.json()
-    hits= data.get("hits", {})
-    total= hits.get("total", {}).get("value", 0)
-    samples= [
+    data = r.json()
+    hits = data.get("hits", {})
+    total = hits.get("total", {}).get("value", 0)
+    samples = [
         f"[{h['_source'].get('process','?')}] {h['_source'].get('message','')[:100]}"
         for h in hits.get("hits", [])
     ]
     return total, samples
 
 def save_alert_to_es(rule_name, rule, count, samples):
-    alert= {
+    alert = {
         "timestamp":       datetime.now(timezone.utc).isoformat(),
         "rule":            rule_name,
         "severity":        rule["severity"],
@@ -131,7 +131,7 @@ def save_alert_to_es(rule_name, rule, count, samples):
         "window_min":      rule["window_min"],
         "sample_messages": " | ".join(samples[:3])
     }
-    r= requests.post(f"{ES_URL}/{ALERTS_INDEX}/_doc", json=alert)
+    r = requests.post(f"{ES_URL}/{ALERTS_INDEX}/_doc", json=alert)
     return r.status_code == 201
 
 def run_detection():
@@ -139,11 +139,11 @@ def run_detection():
     print(f"{'Rule':<28} {'Events':>6}  {'Window':>6}  Status")
     print(f"{'-'*28} {'-'*6}  {'-'*6}  {'-'*30}")
 
-    alerts_fired= 0
-    network_scan_triggered= False
+    alerts_fired = 0
+    network_scan_triggered = False
 
     for rule_name, rule in RULES.items():
-        count, samples= query_logs(
+        count, samples = query_logs(
             rule["phrases"],
             rule["exclude_processes"],
             rule["window_min"]
@@ -162,7 +162,7 @@ def run_detection():
                 samples=samples
             )
 
-            status= f"ALERT [{rule['severity']}] -> Slack"
+            status = f"ALERT [{rule['severity']}] -> Slack"
             alerts_fired += 1
 
             if rule_name == "network_scan":
@@ -190,7 +190,7 @@ def run():
 
     while True:
         run_detection()
-        next_run= (datetime.now() + timedelta(seconds=60)).strftime('%H:%M:%S')
+        next_run = (datetime.now() + timedelta(seconds=60)).strftime('%H:%M:%S')
         print(f"\nNext cycle: {next_run} | Ctrl+C to stop")
         time.sleep(60)
 
