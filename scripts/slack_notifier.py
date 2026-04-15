@@ -2,8 +2,9 @@ import requests
 import os
 from datetime import datetime
 
+
 def get_webhook_url():
-    url= os.getenv("SLACK_WEBHOOK_URL")
+    url = os.getenv("SLACK_WEBHOOK_URL")
     if not url:
         try:
             with open(os.path.join(os.path.dirname(__file__), "../.env")) as f:
@@ -14,23 +15,25 @@ def get_webhook_url():
             pass
     return url
 
-SEVERITY_EMOJI= {
+
+SEVERITY_EMOJI = {
     "CRITICAL": ":rotating_light:",
     "HIGH":     ":red_circle:",
     "MEDIUM":   ":large_yellow_circle:",
     "LOW":      ":large_green_circle:",
 }
 
+
 def send_alert(rule_name, severity, description, count, window_min, samples=None):
-    url= get_webhook_url()
+    url = get_webhook_url()
     if not url:
         print("No SLACK_WEBHOOK_URL in .env")
         return False
 
-    emoji= SEVERITY_EMOJI.get(severity, ":white_circle:")
-    ts= datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+    emoji = SEVERITY_EMOJI.get(severity, ":white_circle:")
+    ts = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
 
-    blocks= [
+    blocks = [
         {
             "type": "header",
             "text": {
@@ -57,7 +60,7 @@ def send_alert(rule_name, severity, description, count, window_min, samples=None
     ]
 
     if samples:
-        sample_text= "\n".join(f"`{s[:80]}`" for s in samples[:2])
+        sample_text = "\n".join(f"`{s[:80]}`" for s in samples[:2])
         blocks.append({
             "type": "section",
             "text": {
@@ -76,15 +79,16 @@ def send_alert(rule_name, severity, description, count, window_min, samples=None
         print(f"Slack error: {e}")
         return False
 
+
 def send_vt_threat(ip, verdict, country, as_owner, threat_names, vt_link):
-    url= get_webhook_url()
+    url = get_webhook_url()
     if not url:
         return False
 
-    emoji= ":skull:" if verdict == "MALICIOUS" else ":warning:"
-    threats_text= ", ".join(threat_names) if threat_names else "unknown"
+    emoji = ":skull:" if verdict == "MALICIOUS" else ":warning:"
+    threats_text = ", ".join(threat_names) if threat_names else "unknown"
 
-    blocks= [
+    blocks = [
         {
             "type": "header",
             "text": {
@@ -111,13 +115,14 @@ def send_vt_threat(ip, verdict, country, as_owner, threat_names, vt_link):
         {"type": "divider"}
     ]
 
-    payload= {"blocks": blocks}
+    payload = {"blocks": blocks}
     try:
         r = requests.post(url, json=payload, timeout=5)
         return r.status_code == 200
     except requests.RequestException as e:
         print(f"Slack VT error: {e}")
         return False
+
 
 if __name__ == "__main__":
     print("Sending test alert to Slack")

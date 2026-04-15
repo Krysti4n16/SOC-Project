@@ -1,3 +1,4 @@
+from slack_notifier import send_alert as slack_alert
 import json
 import requests
 import os
@@ -6,15 +7,15 @@ from datetime import datetime, timezone
 import sys
 
 sys.path.insert(0, os.path.dirname(__file__))
-from slack_notifier import send_alert as slack_alert
 
-ES_URL= "http://localhost:9200"
-SURICATA_INDEX= "soc-suricata"
+ES_URL = "http://localhost:9200"
+SURICATA_INDEX = "soc-suricata"
 
-LOG_FILE= os.path.expanduser("~/Desktop/soc-project/suricata/logs/eve.json")
+LOG_FILE = os.path.expanduser("~/Desktop/soc-project/suricata/logs/eve.json")
+
 
 def create_suricata_index():
-    mapping= {
+    mapping = {
         "mappings": {
             "properties": {
                 "timestamp":   {"type": "date"},
@@ -31,9 +32,10 @@ def create_suricata_index():
             }
         }
     }
-    r= requests.put(f"{ES_URL}/{SURICATA_INDEX}", json=mapping)
+    r = requests.put(f"{ES_URL}/{SURICATA_INDEX}", json=mapping)
     if r.status_code in (200, 400):
         print(f"Suricata index '{SURICATA_INDEX}' ready")
+
 
 def parse_event(line):
     try:
@@ -41,18 +43,20 @@ def parse_event(line):
     except json.JSONDecodeError:
         return None
 
+
 def save_to_es(doc):
-    r= requests.post(f"{ES_URL}/{SURICATA_INDEX}/_doc", json=doc)
+    r = requests.post(f"{ES_URL}/{SURICATA_INDEX}/_doc", json=doc)
     return r.status_code == 201
 
+
 def process_alert(event):
-    alert= event.get("alert", {})
-    severity= alert.get("severity", 3)
+    alert = event.get("alert", {})
+    severity = alert.get("severity", 3)
 
-    severity_map= {1: "HIGH", 2: "MEDIUM", 3: "LOW"}
-    severity_label= severity_map.get(severity, "LOW")
+    severity_map = {1: "HIGH", 2: "MEDIUM", 3: "LOW"}
+    severity_label = severity_map.get(severity, "LOW")
 
-    doc= {
+    doc = {
         "timestamp":  event.get("timestamp", datetime.now(timezone.utc).isoformat()),
         "event_type": "alert",
         "src_ip":     event.get("src_ip", ""),
@@ -75,15 +79,17 @@ def process_alert(event):
             description=alert.get("signature", "Unknown signature"),
             count=1,
             window_min=0,
-            samples=[f"{event.get('src_ip')} → {event.get('dest_ip')}:{event.get('dest_port')}"]
+            samples=[
+                f"{event.get('src_ip')} → {event.get('dest_ip')}:{event.get('dest_port')}"]
         )
 
     return severity_label, alert.get("signature", "")
 
+
 def tail_log(filepath):
     try:
         with open(filepath, "r") as f:
-            f.seek(0, 2)  
+            f.seek(0, 2)
             while True:
                 line = f.readline()
                 if line:
@@ -95,32 +101,34 @@ def tail_log(filepath):
         print(f"Ensure Suricata is running: sudo suricata -c ~/Desktop/soc-project/suricata/suricata.yaml -i en0")
         return
 
+
 def run():
     print("SOC Lab — Suricata IDS Monitor")
     create_suricata_index()
     print(f"Watching: {LOG_FILE}")
     print("Waiting for Suricata alerts\n")
 
-    alerts= 0
+    alerts = 0
     for line in tail_log(LOG_FILE):
-        event= parse_event(line)
+        event = parse_event(line)
         if not event:
             continue
 
-        event_type= event.get("event_type", "")
+        event_type = event.get("event_type", "")
 
         if event_type == "alert":
             severity_label, signature = process_alert(event)
             alerts += 1
-            ts= datetime.now().strftime("%H:%M:%S")
-            src= event.get("src_ip", "?")
-            dst= f"{event.get('dest_ip', '?')}:{event.get('dest_port', '?')}"
+            ts = datetime.now().strftime("%H:%M:%S")
+            src = event.get("src_ip", "?")
+            dst = f"{event.get('dest_ip', '?')}:{event.get('dest_port', '?')}"
             print(f"[{ts}] [{severity_label}] {src} → {dst}")
             print(f"         {signature[:80]}")
 
         elif event_type == "dns":
             query = event.get("dns", {}).get("rrname", "")
-            suspicious_tlds = [".onion", ".xyz", ".top", ".ru", ".tk", ".pw", ".cc"]
+            suspicious_tlds = [".onion", ".xyz",
+                               ".top", ".ru", ".tk", ".pw", ".cc"]
             if any(kw in query for kw in suspicious_tlds):
                 ts = datetime.now().strftime("%H:%M:%S")
                 src = event.get("src_ip", "?")
@@ -133,6 +141,7 @@ def run():
                     window_min=0,
                     samples=[f"Source: {src} → Query: {query}"]
                 )
+
 
 if __name__ == "__main__":
     run()

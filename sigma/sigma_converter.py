@@ -3,31 +3,33 @@ import json
 import os
 from datetime import datetime
 
-RULES_DIR= os.path.join(os.path.dirname(__file__), "rules")
-OUTPUT_DIR= os.path.join(os.path.dirname(__file__), "output")
+RULES_DIR = os.path.join(os.path.dirname(__file__), "rules")
+OUTPUT_DIR = os.path.join(os.path.dirname(__file__), "output")
 
-SEVERITY_MAP= {
+SEVERITY_MAP = {
     "critical": "CRITICAL",
     "high":     "HIGH",
     "medium":   "MEDIUM",
     "low":      "LOW",
 }
 
+
 def load_sigma_rule(filepath):
     with open(filepath, "r") as f:
-        content= f.read()
-    yaml_part= content.split("---")[0]
+        content = f.read()
+    yaml_part = content.split("---")[0]
     return yaml.safe_load(yaml_part)
 
-def sigma_to_elasticsearch(rule):
-    detection= rule.get("detection", {})
-    keywords= detection.get("keywords", [])
 
-    should_clauses= [
+def sigma_to_elasticsearch(rule):
+    detection = rule.get("detection", {})
+    keywords = detection.get("keywords", [])
+
+    should_clauses = [
         {"match_phrase": {"message": kw}} for kw in keywords
     ]
 
-    es_query= {
+    es_query = {
         "query": {
             "bool": {
                 "should": should_clauses,
@@ -39,8 +41,9 @@ def sigma_to_elasticsearch(rule):
 
     return es_query
 
+
 def sigma_to_detection_rule(rule):
-    detection_rule= {
+    detection_rule = {
         "description": rule.get("description", "").strip().replace("\n", " "),
         "phrases":     rule.get("detection", {}).get("keywords", []),
         "exclude_processes": [],
@@ -50,8 +53,9 @@ def sigma_to_detection_rule(rule):
     }
     return detection_rule
 
+
 def generate_report(rules):
-    html= f"""<!DOCTYPE html>
+    html = f"""<!DOCTYPE html>
 <html>
 <head>
     <meta charset="UTF-8">
@@ -100,7 +104,7 @@ def generate_report(rules):
         <pre>{keywords_str}</pre>
         <p><strong>False positives:</strong><br>{fps_html}</p>
         <p class="meta"><strong>References:</strong> 
-        {' | '.join(f'<a href="{r}" style="color:#58a6ff">{r}</a>' 
+        {' | '.join(f'<a href="{r}" style="color:#58a6ff">{r}</a>'
                     for r in rule.get('references', []))}</p>
     </div>
 """
@@ -108,10 +112,11 @@ def generate_report(rules):
     html += "</body></html>"
     return html
 
+
 def convert_all():
     os.makedirs(OUTPUT_DIR, exist_ok=True)
-    rules= []
-    converted= 0
+    rules = []
+    converted = 0
 
     print("SIGMA Rule Converter")
     print(f"Loading rules from: {RULES_DIR}\n")
@@ -120,28 +125,28 @@ def convert_all():
         if not filename.endswith(".yml"):
             continue
 
-        filepath= os.path.join(RULES_DIR, filename)
-        rule= load_sigma_rule(filepath)
+        filepath = os.path.join(RULES_DIR, filename)
+        rule = load_sigma_rule(filepath)
         rules.append(rule)
 
-        es_query= sigma_to_elasticsearch(rule)
-        es_output= os.path.join(
+        es_query = sigma_to_elasticsearch(rule)
+        es_output = os.path.join(
             OUTPUT_DIR,
             filename.replace(".yml", "_elasticsearch.json")
         )
         with open(es_output, "w") as f:
             json.dump(es_query, f, indent=2)
 
-        det_rule= sigma_to_detection_rule(rule)
-        det_output= os.path.join(
+        det_rule = sigma_to_detection_rule(rule)
+        det_output = os.path.join(
             OUTPUT_DIR,
             filename.replace(".yml", "_detection_rule.json")
         )
         with open(det_output, "w") as f:
             json.dump(det_rule, f, indent=2)
 
-        level= rule.get("level", "?").upper()
-        title= rule.get("title", filename)
+        level = rule.get("level", "?").upper()
+        title = rule.get("title", filename)
         print(f"[{level}] {title}")
         print(f"-> {es_output}")
         converted += 1
@@ -153,6 +158,7 @@ def convert_all():
     print(f"\nConverted {converted} rules")
     print(f"HTML report: {report_path}")
     print(f"\nopen {report_path}")
+
 
 if __name__ == "__main__":
     convert_all()

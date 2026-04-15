@@ -4,11 +4,12 @@ import requests
 from datetime import datetime, timezone
 import time
 
-ES_URL= "http://localhost:9200"
-INDEX= "soc-macos-logs"
+ES_URL = "http://localhost:9200"
+INDEX = "soc-macos-logs"
+
 
 def create_index():
-    mapping= {
+    mapping = {
         "mappings": {
             "properties": {
                 "timestamp": {"type": "date"},
@@ -22,11 +23,12 @@ def create_index():
             }
         }
     }
-    r= requests.put(f"{ES_URL}/{INDEX}", json=mapping)
+    r = requests.put(f"{ES_URL}/{INDEX}", json=mapping)
     if r.status_code in (200, 400):
         print(f"Index '{INDEX}' ready")
     else:
         print(f"Index error: {r.text}")
+
 
 def parse_timestamp(raw_ts):
     if not raw_ts:
@@ -44,8 +46,9 @@ def parse_timestamp(raw_ts):
             continue
     return datetime.now(timezone.utc).isoformat()
 
+
 def fetch_macos_logs(last_seconds=60):
-    cmd= [
+    cmd = [
         "log", "show",
         "--last", f"{last_seconds}s",
         "--style", "json",
@@ -62,7 +65,7 @@ def fetch_macos_logs(last_seconds=60):
         '(eventMessage CONTAINS "chmod 777") OR '
         '(eventMessage CONTAINS "history")'
     ]
-    result= subprocess.run(cmd, capture_output=True, text=True)
+    result = subprocess.run(cmd, capture_output=True, text=True)
     if not result.stdout.strip():
         return []
     try:
@@ -70,8 +73,9 @@ def fetch_macos_logs(last_seconds=60):
     except json.JSONDecodeError:
         return []
 
+
 def send_to_elasticsearch(events):
-    sent= 0
+    sent = 0
     for event in events:
         doc = {
             "timestamp": parse_timestamp(event.get("timestamp", "")),
@@ -83,10 +87,11 @@ def send_to_elasticsearch(events):
             "subsystem": event.get("subsystem", ""),
             "raw":       json.dumps(event)
         }
-        r= requests.post(f"{ES_URL}/{INDEX}/_doc", json=doc)
+        r = requests.post(f"{ES_URL}/{INDEX}/_doc", json=doc)
         if r.status_code == 201:
             sent += 1
     return sent
+
 
 def run():
     print("SOC Lab — macOS Log Collector")
@@ -96,14 +101,15 @@ def run():
     print("[*] Interval: 60s | Press Ctrl+C to stop\n")
 
     while True:
-        events= fetch_macos_logs(last_seconds=60)
-        ts= datetime.now().strftime("%H:%M:%S")
+        events = fetch_macos_logs(last_seconds=60)
+        ts = datetime.now().strftime("%H:%M:%S")
         if events:
-            sent= send_to_elasticsearch(events)
+            sent = send_to_elasticsearch(events)
             print(f"[{ts}] {len(events)} events collected → {sent} sent to ES")
         else:
             print(f"[{ts}] No security events in last 60s")
         time.sleep(60)
+
 
 if __name__ == "__main__":
     run()

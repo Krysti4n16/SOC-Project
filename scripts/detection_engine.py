@@ -1,3 +1,5 @@
+from virustotal_checker import run_vt_check, create_vt_index
+from slack_notifier import send_alert as slack_alert
 import requests
 import json
 from datetime import datetime, timezone, timedelta
@@ -6,8 +8,6 @@ import sys
 import os
 
 sys.path.insert(0, os.path.dirname(__file__))
-from slack_notifier import send_alert as slack_alert
-from virustotal_checker import run_vt_check, create_vt_index
 
 ES_URL = os.environ.get("ES_URL", "http://localhost:9200")
 INDEX = "soc-macos-logs"
@@ -62,15 +62,16 @@ RULES = {
         "severity":    "HIGH",
     },
     "defense_evasion": {
-    "description": "Attempting to cover up the tracks – history modification or obfuscation",
-    "phrases":     ["base64 --decode", "history -c", "rm .bash_history",
-                    "chmod 777", "chflags hidden"],
-    "exclude_processes": [],
-    "threshold":   1,
-    "window_min":  5,
-    "severity":    "HIGH",
-},
+        "description": "Attempting to cover up the tracks – history modification or obfuscation",
+        "phrases":     ["base64 --decode", "history -c", "rm .bash_history",
+                        "chmod 777", "chflags hidden"],
+        "exclude_processes": [],
+        "threshold":   1,
+        "window_min":  5,
+        "severity":    "HIGH",
+    },
 }
+
 
 def create_alerts_index():
     mapping = {
@@ -90,10 +91,14 @@ def create_alerts_index():
     if r.status_code in (200, 400):
         print(f"Alerts index '{ALERTS_INDEX}' ready")
 
+
 def query_logs(phrases, exclude_processes, window_minutes):
-    since = (datetime.now(timezone.utc) - timedelta(minutes=window_minutes)).isoformat()
-    should_clauses = [{"match_phrase": {"message": phrase}} for phrase in phrases]
-    must_not_clauses = [{"term": {"process": proc}} for proc in exclude_processes]
+    since = (datetime.now(timezone.utc) -
+             timedelta(minutes=window_minutes)).isoformat()
+    should_clauses = [{"match_phrase": {"message": phrase}}
+                      for phrase in phrases]
+    must_not_clauses = [{"term": {"process": proc}}
+                        for proc in exclude_processes]
 
     query = {
         "query": {
@@ -116,10 +121,11 @@ def query_logs(phrases, exclude_processes, window_minutes):
     hits = data.get("hits", {})
     total = hits.get("total", {}).get("value", 0)
     samples = [
-        f"[{h['_source'].get('process','?')}] {h['_source'].get('message','')[:100]}"
+        f"[{h['_source'].get('process', '?')}] {h['_source'].get('message', '')[:100]}"
         for h in hits.get("hits", [])
     ]
     return total, samples
+
 
 def save_alert_to_es(rule_name, rule, count, samples):
     alert = {
@@ -133,6 +139,7 @@ def save_alert_to_es(rule_name, rule, count, samples):
     }
     r = requests.post(f"{ES_URL}/{ALERTS_INDEX}/_doc", json=alert)
     return r.status_code == 201
+
 
 def run_detection():
     print(f"\nDetection cycle — {datetime.now().strftime('%H:%M:%S')}")
@@ -173,7 +180,8 @@ def run_detection():
         else:
             status = f"OK  [{rule['severity']}]"
 
-        print(f"  {rule_name:<28} {count:>6}  {rule['window_min']:>4}min  {status}")
+        print(
+            f"  {rule_name:<28} {count:>6}  {rule['window_min']:>4}min  {status}")
 
     if network_scan_triggered:
         print(f"\nnetwork_scan triggered — running VirusTotal check")
@@ -181,6 +189,7 @@ def run_detection():
 
     print(f"\nAlerts fired: {alerts_fired}")
     return alerts_fired
+
 
 def run():
     print("SOC Lab — Detection Engine")
@@ -190,9 +199,11 @@ def run():
 
     while True:
         run_detection()
-        next_run = (datetime.now() + timedelta(seconds=60)).strftime('%H:%M:%S')
+        next_run = (datetime.now() + timedelta(seconds=60)
+                    ).strftime('%H:%M:%S')
         print(f"\nNext cycle: {next_run} | Ctrl+C to stop")
         time.sleep(60)
+
 
 if __name__ == "__main__":
     run()

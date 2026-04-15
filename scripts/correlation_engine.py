@@ -1,3 +1,4 @@
+from slack_notifier import send_alert as slack_alert
 import requests
 import json
 from datetime import datetime, timezone, timedelta
@@ -6,13 +7,12 @@ import sys
 import os
 
 sys.path.insert(0, os.path.dirname(__file__))
-from slack_notifier import send_alert as slack_alert
 
-ES_URL= os.environ.get("ES_URL", "http://localhost:9200")
-CORRELATION_INDEX= "soc-correlated-incidents"
+ES_URL = os.environ.get("ES_URL", "http://localhost:9200")
+CORRELATION_INDEX = "soc-correlated-incidents"
 
 
-CORRELATION_RULES= [
+CORRELATION_RULES = [
     {
         "name": "malware_execution_chain",
         "description": (
@@ -147,7 +147,7 @@ CORRELATION_RULES= [
 
 
 def create_correlation_index():
-    mapping= {
+    mapping = {
         "mappings": {
             "properties": {
                 "timestamp":   {"type": "date"},
@@ -162,22 +162,22 @@ def create_correlation_index():
             }
         }
     }
-    r= requests.put(f"{ES_URL}/{CORRELATION_INDEX}", json=mapping)
+    r = requests.put(f"{ES_URL}/{CORRELATION_INDEX}", json=mapping)
     if r.status_code in (200, 400):
         print(f"Correlation index '{CORRELATION_INDEX}' ready")
 
 
 def check_condition(condition, window_minutes):
-    since= (
+    since = (
         datetime.now(timezone.utc) - timedelta(minutes=window_minutes)
     ).isoformat()
 
-    should_clauses= [
+    should_clauses = [
         {"match_phrase": {condition["field"]: val}}
         for val in condition["values"]
     ]
 
-    query= {
+    query = {
         "query": {
             "bool": {
                 "must": [
@@ -192,25 +192,25 @@ def check_condition(condition, window_minutes):
                     "severity", "check"]
     }
 
-    r= requests.post(
+    r = requests.post(
         f"{ES_URL}/{condition['source']}/_search",
         json=query
     )
     if r.status_code != 200:
         return False, []
 
-    hits= r.json().get("hits", {})
-    count= hits.get("total", {}).get("value", 0)
-    samples= [h["_source"] for h in hits.get("hits", [])]
+    hits = r.json().get("hits", {})
+    count = hits.get("total", {}).get("value", 0)
+    samples = [h["_source"] for h in hits.get("hits", [])]
     return count >= condition["min_count"], samples
 
 
 def already_fired_recently(rule_name, window_minutes=30):
-    since= (
+    since = (
         datetime.now(timezone.utc) - timedelta(minutes=window_minutes)
     ).isoformat()
 
-    query= {
+    query = {
         "query": {
             "bool": {
                 "must": [
@@ -221,7 +221,7 @@ def already_fired_recently(rule_name, window_minutes=30):
         },
         "size": 1
     }
-    r= requests.post(
+    r = requests.post(
         f"{ES_URL}/{CORRELATION_INDEX}/_search",
         json=query
     )
@@ -231,7 +231,7 @@ def already_fired_recently(rule_name, window_minutes=30):
 
 
 def save_incident(rule, conditions_met, evidence):
-    doc= {
+    doc = {
         "timestamp":        datetime.now(timezone.utc).isoformat(),
         "name":             rule["name"],
         "severity":         rule["severity"],
@@ -242,7 +242,7 @@ def save_incident(rule, conditions_met, evidence):
         "evidence":         evidence,
         "window_min":       rule["window_min"],
     }
-    r= requests.post(f"{ES_URL}/{CORRELATION_INDEX}/_doc", json=doc)
+    r = requests.post(f"{ES_URL}/{CORRELATION_INDEX}/_doc", json=doc)
     return r.status_code == 201
 
 
@@ -251,30 +251,30 @@ def run_correlation():
     print(f"  {'Scenario':<35} {'Conditions':>10}  Status")
     print(f"  {'-'*35} {'-'*10}  {'-'*25}")
 
-    incidents_fired= 0
+    incidents_fired = 0
 
     for rule in CORRELATION_RULES:
-        conditions_met= 0
-        evidence= {}
+        conditions_met = 0
+        evidence = {}
 
         for condition in rule["conditions"]:
-            met, samples= check_condition(condition, rule["window_min"])
+            met, samples = check_condition(condition, rule["window_min"])
             if met:
                 conditions_met += 1
-                evidence[condition["label"]]= [
+                evidence[condition["label"]] = [
                     str(s)[:100] for s in samples[:2]
                 ]
 
-        total= len(rule["conditions"])
-        ratio= f"{conditions_met}/{total}"
+        total = len(rule["conditions"])
+        ratio = f"{conditions_met}/{total}"
 
         if conditions_met == total:
             if already_fired_recently(rule["name"]):
-                status= "suppressed (dedup)"
+                status = "suppressed (dedup)"
             else:
                 save_incident(rule, conditions_met, evidence)
 
-                evidence_lines= [
+                evidence_lines = [
                     f"{label}: {samples[0][:80] if samples else 'detected'}"
                     for label, samples in evidence.items()
                 ]
@@ -287,7 +287,7 @@ def run_correlation():
                     samples=evidence_lines
                 )
 
-                status= f"*** INCIDENT [{rule['severity']}] -> Slack"
+                status = f"*** INCIDENT [{rule['severity']}] -> Slack"
                 incidents_fired += 1
 
                 for label, samples in evidence.items():
@@ -309,7 +309,7 @@ def run():
 
     while True:
         run_correlation()
-        next_run= (
+        next_run = (
             datetime.now() + timedelta(seconds=90)
         ).strftime('%H:%M:%S')
         print(f"\nNext cycle: {next_run} | Ctrl+C to stop")
