@@ -88,7 +88,7 @@ def create_alerts_index():
     }
     r = requests.put(f"{ES_URL}/{ALERTS_INDEX}", json=mapping)
     if r.status_code in (200, 400):
-        print("Alerts index '{ALERTS_INDEX}' ready")
+        print(f"Alerts index '{ALERTS_INDEX}' ready")
 
 
 def query_logs(phrases, exclude_processes, window_minutes):
@@ -141,9 +141,9 @@ def save_alert_to_es(rule_name, rule, count, samples):
 
 
 def run_detection():
-    print("\nDetection cycle — {datetime.now().strftime('%H:%M:%S')}")
-    print("{'Rule':<28} {'Events':>6}  {'Window':>6}  Status")
-    print("{'-'*28} {'-'*6}  {'-'*6}  {'-'*30}")
+    print(f"\nDetection cycle — {datetime.now().strftime('%H:%M:%S')}")
+    print(f"{'Rule':<28} {'Events':>6}  {'Window':>6}  Status")
+    print(f"{'-'*28} {'-'*6}  {'-'*6}  {'-'*30}")
 
     alerts_fired = 0
     network_scan_triggered = False
@@ -183,10 +183,10 @@ def run_detection():
             f"  {rule_name:<28} {count:>6}  {rule['window_min']:>4}min  {status}")
 
     if network_scan_triggered:
-        print("\nnetwork_scan triggered — running VirusTotal check")
+        print(f"\nnetwork_scan triggered — running VirusTotal check")
         run_vt_check(window_minutes=5)
 
-    print("\nAlerts fired: {alerts_fired}")
+    print(f"\nAlerts fired: {alerts_fired}")
     return alerts_fired
 
 
@@ -194,13 +194,13 @@ def run():
     print("SOC Lab — Detection Engine")
     create_alerts_index()
     create_vt_index()
-    print("Loaded {len(RULES)} rules\n")
+    print(f"Loaded {len(RULES)} rules\n")
 
     while True:
         run_detection()
         next_run = (datetime.now() + timedelta(seconds=60)
                     ).strftime('%H:%M:%S')
-        print("\nNext cycle: {next_run} | Ctrl+C to stop")
+        print(f"\nNext cycle: {next_run} | Ctrl+C to stop")
         time.sleep(60)
 
 

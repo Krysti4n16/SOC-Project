@@ -122,7 +122,7 @@ def run():
             ts = datetime.now().strftime("%H:%M:%S")
             src = event.get("src_ip", "?")
             dst = f"{event.get('dest_ip', '?')}:{event.get('dest_port', '?')}"
-            print("[{ts}] [{severity_label}] {src} → {dst}")
+            print(f"[{ts}] [{severity_label}] {src} → {dst}")
             print("         {signature[:80]}")
 
         elif event_type == "dns":
@@ -132,7 +132,7 @@ def run():
             if any(kw in query for kw in suspicious_tlds):
                 ts = datetime.now().strftime("%H:%M:%S")
                 src = event.get("src_ip", "?")
-                print("[{ts}] [DNS] Suspicious query: {query}")
+                print(f"[{ts}] [DNS] Suspicious query: {query}")
                 slack_alert(
                     rule_name="suricata_suspicious_dns",
                     severity="HIGH",
