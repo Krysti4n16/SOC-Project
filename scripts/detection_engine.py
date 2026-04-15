@@ -183,7 +183,7 @@ def run_detection():
             f"  {rule_name:<28} {count:>6}  {rule['window_min']:>4}min  {status}")
 
     if network_scan_triggered:
-        print(f"\nnetwork_scan triggered — running VirusTotal check")
+        print("\nnetwork_scan triggered — running VirusTotal check")
         run_vt_check(window_minutes=5)
 
     print(f"\nAlerts fired: {alerts_fired}")
