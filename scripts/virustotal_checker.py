@@ -8,17 +8,20 @@ ES_URL = os.environ.get("ES_URL", "http://localhost:9200")
 VT_INDEX = "soc-virustotal"
 
 
-def get_api_key():
-    key = os.getenv("VIRUSTOTAL_API_KEY")
-    if not key:
+def get_api_keys():
+    keys_str = os.getenv("VIRUSTOTAL_API_KEYS")
+    if not keys_str:
         try:
             with open(os.path.join(os.path.dirname(__file__), "../.env")) as f:
                 for line in f:
-                    if line.startswith("VIRUSTOTAL_API_KEY="):
-                        key = line.strip().split("=", 1)[1]
+                    if line.startswith("VIRUSTOTAL_API_KEYS="):
+                        keys_str = line.strip().split("=", 1)[1]
         except FileNotFoundError:
             pass
-    return key
+            
+    if keys_str:
+        return [k.strip() for k in keys_str.split(",") if k.strip()]
+    return []
 
 
 def create_vt_index():
@@ -79,22 +82,34 @@ def extract_ips_from_logs(window_minutes=30):
         return []
 
 
-def check_ip_virustotal(ip, api_key):
-    headers = {"x-apikey": api_key}
-    url = f"https://www.virustotal.com/api/v3/ip_addresses/{ip}"
+def check_ip_virustotal(ip, api_keys, current_key_idx):
+    start_idx = current_key_idx
+    
+    while True:
+        key = api_keys[current_key_idx]
+        headers = {"x-apikey": key}
+        url = f"https://www.virustotal.com/api/v3/ip_addresses/{ip}"
 
-    try:
-        r = requests.get(url, headers=headers, timeout=10)
-        if r.status_code == 200:
-            return r.json()
-        elif r.status_code == 404:
-            return None
-        else:
-            print(f"VT API error {r.status_code} for {ip}")
-            return None
-    except requests.RequestException as e:
-        print(f"Request failed for {ip}: {e}")
-        return None
+        try:
+            r = requests.get(url, headers=headers, timeout=10)
+            if r.status_code == 200:
+                return r.json(), current_key_idx
+            elif r.status_code == 404:
+                return None, current_key_idx
+            elif r.status_code == 429 or r.status_code == 401:
+                print(f"Key nr {current_key_idx + 1} limit exhausted. Moving to next one...")
+                current_key_idx = (current_key_idx + 1) % len(api_keys)
+                
+                if current_key_idx == start_idx:
+                    print("All keys exhausted thier limit. Waiting 60 seconds...")
+                    time.sleep(60)
+                continue
+            else:
+                print(f"VT API error {r.status_code} for {ip}")
+                return None, current_key_idx
+        except requests.RequestException as e:
+            print(f"Request failed for {ip}: {e}")
+            return None, current_key_idx
 
 
 def parse_vt_response(ip, data):
@@ -154,12 +169,12 @@ def already_checked_today(ip):
 
 
 def run_vt_check(window_minutes=10):
-    api_key = get_api_key()
-    if not api_key:
-        print("No VIRUSTOTAL_API_KEY in .env")
+    api_keys = get_api_keys()
+    if not api_keys:
+        print("No VIRUSTOTAL_API_KEYS in .env")
         return
 
-    print(f"\nVirusTotal check — {datetime.now().strftime('%H:%M:%S')}")
+    print(f"\nVirusTotal check — {datetime.now().strftime('%H:%M:%S')} (Loaded {len(api_keys)} key)")
     ips = extract_ips_from_logs(window_minutes)
 
     if not ips:
@@ -169,13 +184,16 @@ def run_vt_check(window_minutes=10):
     print(f"Found {len(ips)} unique external IPs")
     checked = 0
     threats = 0
+    
+    current_key_idx = 0
 
     for ip in ips:
         if already_checked_today(ip):
             print(f"{ip:<18} skipped (checked today)")
             continue
 
-        data = check_ip_virustotal(ip, api_key)
+        data, current_key_idx = check_ip_virustotal(ip, api_keys, current_key_idx)
+        
         if not data:
             continue
 
@@ -196,8 +214,7 @@ def run_vt_check(window_minutes=10):
 
         if doc["verdict"] in ("MALICIOUS", "SUSPICIOUS"):
             threats += 1
-
-        time.sleep(15)
+        time.sleep(1)
 
     print(f"\nChecked: {checked} IPs | Threats found: {threats}")
 
