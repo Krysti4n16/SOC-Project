@@ -18,7 +18,7 @@ def get_api_keys():
                         keys_str = line.strip().split("=", 1)[1]
         except FileNotFoundError:
             pass
-            
+
     if keys_str:
         return [k.strip() for k in keys_str.split(",") if k.strip()]
     return []
@@ -84,7 +84,7 @@ def extract_ips_from_logs(window_minutes=30):
 
 def check_ip_virustotal(ip, api_keys, current_key_idx):
     start_idx = current_key_idx
-    
+
     while True:
         key = api_keys[current_key_idx]
         headers = {"x-apikey": key}
@@ -99,7 +99,7 @@ def check_ip_virustotal(ip, api_keys, current_key_idx):
             elif r.status_code == 429 or r.status_code == 401:
                 print(f"Key nr {current_key_idx + 1} limit exhausted. Moving to next one...")
                 current_key_idx = (current_key_idx + 1) % len(api_keys)
-                
+
                 if current_key_idx == start_idx:
                     print("All keys exhausted thier limit. Waiting 60 seconds...")
                     time.sleep(60)
@@ -184,7 +184,7 @@ def run_vt_check(window_minutes=10):
     print(f"Found {len(ips)} unique external IPs")
     checked = 0
     threats = 0
-    
+
     current_key_idx = 0
 
     for ip in ips:
@@ -193,7 +193,7 @@ def run_vt_check(window_minutes=10):
             continue
 
         data, current_key_idx = check_ip_virustotal(ip, api_keys, current_key_idx)
-        
+
         if not data:
             continue
 
